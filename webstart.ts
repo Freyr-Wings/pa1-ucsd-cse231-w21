@@ -12,6 +12,11 @@ function webStart() {
           elt.innerText = arg;
           return arg;
         },
+
+        abs: Math.abs,
+        max: Math.max,
+        min: Math.min,
+        pow: Math.pow
       },
     };
 

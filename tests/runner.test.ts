@@ -13,6 +13,10 @@ const importObject = {
       importObject.output += "\n";
       return arg;
     },
+
+    abs: (arg : number) => {
+      return Math.abs(arg);
+    }
   },
 
   output: ""
