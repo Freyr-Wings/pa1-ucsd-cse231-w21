@@ -5,6 +5,7 @@
 
 import wabt from 'wabt';
 import * as compiler from './compiler';
+import * as env from './env';
 import {parse} from './parser';
 
 // NOTE(joe): This is a hack to get the CLI Repl to run. WABT registers a global
@@ -21,32 +22,42 @@ if(typeof process !== "undefined") {
   };
 }
 
-export async function run(source : string, config: any) : Promise<number> {
+const MEMORY_SIZE = 10;
+const memory  = new WebAssembly.Memory({ initial: MEMORY_SIZE, maximum: MEMORY_SIZE });
+
+export async function run(source : string, config: any) : Promise<[any]> {
   const wabtInterface = await wabt();
-  const parsed = parse(source);
-  var returnType = "";
-  var returnExpr = "";
-  const lastExpr = parsed[parsed.length - 1]
-  if(lastExpr.tag === "expr") {
-    returnType = "(result i32)";
-    returnExpr = "(local.get $$last)"
-  }
-  const compiled = compiler.compile(source);
-  const importObject = config.importObject;
-  const wasmSource = `(module
-    (func $print (import "imports" "print") (param i32) (result i32))
-    (func $abs (import "imports" "abs") (param i32) (result i32))
-    (func $max (import "imports" "max") (param i32)(param i32) (result i32))
-    (func $min (import "imports" "min") (param i32)(param i32) (result i32))
-    (func $pow (import "imports" "pow") (param i32)(param i32) (result i32))
-    (func (export "exported_func") ${returnType}
-      ${compiled.wasmSource}
-      ${returnExpr}
-    )
-  )`;
+
+  const importObject = {
+      js: { mem: memory },
+      imports: {
+        print: (type: number, value: number) => {
+          console.log("Logging from WASM: ", type, ", ", value);
+          const elt = document.createElement("pre");
+          document.getElementById("output").appendChild(elt);
+          let text = "";
+          if (type === 1) {
+            if (value === 0) {
+              text = "False";
+            } else {
+              text = "True";
+            }
+          } else if (type === 2) {
+            text = value.toString();
+          } else {
+            text = "None";
+          }
+          elt.innerText = text;
+          return value
+        },
+      },
+  };
+
+  const wasmSource = compiler.compile(source).wasmSource;
+
   const myModule = wabtInterface.parseWat("test.wat", wasmSource);
   var asBinary = myModule.toBinary({});
   var wasmModule = await WebAssembly.instantiate(asBinary.buffer, importObject);
   const result = (wasmModule.instance.exports.exported_func as any)();
-  return result;
+  return [result];
 }

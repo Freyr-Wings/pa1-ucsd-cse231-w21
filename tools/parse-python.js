@@ -1,7 +1,7 @@
 const { TreeCursor } = require('lezer');
 const python = require('lezer-python');
 
-const input = "def f(x:int)->int:\n  print(x)\n  return x\nx=233";
+const input = "def f(x:int, y:int):\n  z:int=12";
 // const input = "z:object=None";
 
 const tree = python.parser.parse(input);

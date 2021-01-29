@@ -18,12 +18,25 @@ async function mem() {
     //         i32.load  ;; load value 0x123456
     //     ))`;
     
+    // const wasmSource = `(module
+    //     (import "js" "mem" (memory 1))  ;; memory with one page(64KB)
+    //     (func (export "exported_func") (result i32)
+    //         i32.const 65532
+    //         i32.load  ;; i32 needs 4 bytes, >65532 will cause error
+    //     )
+    // )`;
+
     const wasmSource = `(module
         (import "js" "mem" (memory 1))  ;; memory with one page(64KB)
+        (func $add (result i32)
+            i32.const 666
+        )
         (func (export "exported_func") (result i32)
             i32.const 65532
-            i32.load  ;; i32 needs 4 bytes, > 65532 will cause error
-        ))`;
+            call $add
+            i32.add
+        )
+    )`;
 
     const myModule = wabtInterface.parseWat("test.wat", wasmSource);
     var asBinary = myModule.toBinary({});

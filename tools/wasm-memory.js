@@ -53,7 +53,7 @@ function mem() {
                     return [4 /*yield*/, wabt_1["default"]()];
                 case 1:
                     wabtInterface = _a.sent();
-                    wasmSource = "(module\n        (import \"js\" \"mem\" (memory 1))  ;; memory with one page(64KB)\n        (func (export \"exported_func\") (result i32)\n            i32.const 65533\n            i32.load  ;; i32 needs 4 bytes, > 65531 will cause error\n        ))";
+                    wasmSource = "(module\n        (import \"js\" \"mem\" (memory 1))  ;; memory with one page(64KB)\n        (func $add (result i32)\n            i32.const 666\n        )\n        (func (export \"exported_func\") (result i32)\n            i32.const 65532\n            call $add\n            i32.add\n        )\n    )";
                     myModule = wabtInterface.parseWat("test.wat", wasmSource);
                     asBinary = myModule.toBinary({});
                     return [4 /*yield*/, WebAssembly.instantiate(asBinary.buffer, importObject)];
@@ -68,5 +68,6 @@ function mem() {
 mem().then(function (r) {
     console.log(r);
 });
+// https://developer.mozilla.org/en-US/docs/WebAssembly/Understanding_the_text_format
 // ./node_modules/.bin/tsc ./tools/wasm-memory.ts --esModuleInterop -outDir ./tools/
 // node ./tools/wasm-memory.js

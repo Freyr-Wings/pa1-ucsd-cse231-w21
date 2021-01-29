@@ -16,3 +16,21 @@ Some lecture scripts like "parse-python.js".
 
 Who (if anyone) in the class did you work with on the assignment?
 I did the work individually.
+
+A description of the representation of values (integers, booleans, and None) in your implementation. Give examples, and explain why it is necessary to do so.
+Give an example of a program that uses
+At least one global variable
+At least one function with a parameter
+At least one variable defined inside a function
+By linking to specific definitions and code in your implementation, describe where and how those three variables are stored and represented throughout compilation.
+
+Write a Python program that goes into an infinite loop. What happens when you run it on the web page using your compiler?
+For each of the following scenarios, show a screenshot of your compiler running the scenario. If your compiler cannot handle the described scenario, write a few sentences about why.
+A function defined in the main program and later called from the interactive prompt
+A function defined at the interactive prompt, whose body contains a call to a function from the main program, called at a later interactive prompt
+A program that has a type error because of a mismatch of booleans and integers on one of the arithmetic operations
+A program that has a type error in a conditional position
+A program that calls a function from within a loop
+Printing an integer and a boolean
+A recursive function.
+Two mutually-recursive functions.
