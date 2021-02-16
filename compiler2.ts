@@ -745,6 +745,7 @@ export function compile(source: string, importObject: any, gm: MemoryManager, em
     (func $print#int (import "imports" "print_int") (param i32) (result i32))
     (func $print#bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print#object (import "imports" "print_obj") (param i32) (result i32))
+    (func $$noneabort (import "imports" "none_abort"))
     
     ;; function table
     (table ${globalMemory.functionSize} anyfunc)
