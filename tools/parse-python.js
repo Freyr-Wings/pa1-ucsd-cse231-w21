@@ -1,7 +1,16 @@
 const { TreeCursor } = require('lezer');
 const python = require('lezer-python');
 
-const input = "def f(x:int, y:int):\n  z:int=12";
+const input = `class cls1(object):
+x:int=0
+def __init__(self:cls1, x:int):
+  self.x=x
+
+a:cls1=None
+a=cls1(2)
+
+print(a)
+print(a.x)`;
 // const input = "z:object=None";
 
 const tree = python.parser.parse(input);
@@ -37,4 +46,4 @@ preorder(cursor, 0);
 //   console.log(input.substring(cursor.node.from, cursor.node.to));
 // } while(cursor.next());
 
-// node ./parse-python.js
+// node .tools/parse-python.js
