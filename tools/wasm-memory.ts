@@ -38,6 +38,30 @@ async function mem() {
   //     )
   // )`;
 
+  // const wasmSource = `(module
+  //   (import "js" "mem" (memory 1))  ;; memory with one page(64KB)
+  //   (table 2 anyfunc)
+  //   (func $f0
+  //     i32.const 233
+  //     i32.const 23
+  //     i32.store
+  //   )
+  //   (func $f1
+  //     i32.const 233
+  //     i32.const 13
+  //     i32.store
+  //   )
+  //   (elem (i32.const 0) $f0 $f1)
+  //   (type $return_nothing (func))
+  //   (type $return_i32 (func (result i32)))
+  //   (func (export "exported_func") (result i32)
+  //     i32.const 1
+  //     call_indirect (type $return_nothing)
+  //     i32.const 233
+  //     i32.load
+  //   )
+  // )`
+
   const wasmSource = `(module
     (import "js" "mem" (memory 1))  ;; memory with one page(64KB)
     (table 2 anyfunc)
@@ -55,8 +79,12 @@ async function mem() {
     (type $return_nothing (func))
     (type $return_i32 (func (result i32)))
     (func (export "exported_func") (result i32)
-      i32.const 1
-      call_indirect (type $return_nothing)
+      i32.const 233
+      i32.eqz
+      (if (then
+        i32.const 1
+        call_indirect (type $return_nothing)
+      ))
       i32.const 233
       i32.load
     )

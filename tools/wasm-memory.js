@@ -53,7 +53,7 @@ function mem() {
                     return [4 /*yield*/, wabt_1["default"]()];
                 case 1:
                     wabtInterface = _a.sent();
-                    wasmSource = "(module\n    (import \"js\" \"mem\" (memory 1))  ;; memory with one page(64KB)\n    (table 2 anyfunc)\n    (func $f0\n      i32.const 233\n      i32.const 23\n      i32.store\n    )\n    (func $f1\n      i32.const 233\n      i32.const 13\n      i32.store\n    )\n    (elem (i32.const 0) $f0 $f1)\n    (type $return_nothing (func))\n    (type $return_i32 (func (result i32)))\n    (func (export \"exported_func\") (result i32)\n      i32.const 1\n      call_indirect (type $return_nothing)\n      i32.const 233\n      i32.load\n    )\n  )";
+                    wasmSource = "(module\n    (import \"js\" \"mem\" (memory 1))  ;; memory with one page(64KB)\n    (table 2 anyfunc)\n    (func $f0\n      i32.const 233\n      i32.const 23\n      i32.store\n    )\n    (func $f1\n      i32.const 233\n      i32.const 13\n      i32.store\n    )\n    (elem (i32.const 0) $f0 $f1)\n    (type $return_nothing (func))\n    (type $return_i32 (func (result i32)))\n    (func (export \"exported_func\") (result i32)\n      i32.const 233\n      i32.eqz\n      (if (then\n        i32.const 1\n        call_indirect (type $return_nothing)\n      ))\n      i32.const 233\n      i32.load\n    )\n  )";
                     myModule = wabtInterface.parseWat("test.wat", wasmSource);
                     asBinary = myModule.toBinary({});
                     return [4 /*yield*/, WebAssembly.instantiate(asBinary.buffer, importObject)];

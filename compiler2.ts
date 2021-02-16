@@ -265,7 +265,15 @@ function codeGenExpr(expr: Expr): Array<string> {
       let ownerType = expr.owner.type;
       if (ownerType.attributes.has(expr.property)) {
         wasms = wasms.concat(
-          ownerWASM,  // load owner ptr
+          setPointerWithOffsetAndExpr("SP", -1, ownerWASM),  // load owner ptr
+
+          getPointerWithOffset("SP", -1),
+          [`(i32.load)`],
+          codeGenNoneAbort(),
+
+          getPointerWithOffset("SP", -1),
+          [`(i32.load)`],
+
           [
             `(i32.const ${(
             ownerType.headerSize + 
@@ -362,8 +370,12 @@ function codeGenExpr(expr: Expr): Array<string> {
           setPointerWithOffsetAndExpr("SP", -1, codeGenExpr(expr.caller.owner)),  // set as the first arg
           updateRegisterWithOffset("SP", -1),
           getPointer("SP"),
-          // [`(call $print#int)`],
           [`(i32.load)`],
+
+          getPointer("SP"),
+          [`(i32.load)`],
+          codeGenNoneAbort(),
+
           getMethodFromPtr(expr.caller.owner.type, expr.caller.property)
         );
         wasms = wasms.concat(
@@ -373,6 +385,21 @@ function codeGenExpr(expr: Expr): Array<string> {
       break;
     }
   }
+  return wasms;
+}
+
+function codeGenNoneAbort(): Array<string> {
+  let wasms: Array<string> = new Array();
+  // ptr should be on stack
+
+  wasms = wasms.concat(
+    [
+      `(i32.eqz)`,
+      `(if (then`,
+      `(call $$noneabort)`,
+      `))`
+    ]
+  )
   return wasms;
 }
 
@@ -667,6 +694,10 @@ export function compile(source: string, importObject: any, gm: MemoryManager, em
       importObject.output += "\n";
       return 0;
     },
+
+    none_abort: () => {
+      throw new Error("none ptr");
+    }
   }
 
   const wasms = codeGenProgram(ast);

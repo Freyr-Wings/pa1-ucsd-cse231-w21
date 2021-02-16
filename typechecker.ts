@@ -108,6 +108,7 @@ export function tcExpr(e: Expr): Expr {
           throw new Error(`Invalid type for 'is': ${t1TypeName}, ${t2TypeName}`);
         }
         e.type = envManager.classMap.get("$bool");
+        return e;
       }
 
       if (!t1.type.methods.has(method)) {
