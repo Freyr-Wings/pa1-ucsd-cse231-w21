@@ -91,6 +91,10 @@ export function tcExpr(e: Expr): Expr {
       let t1 = tcExpr(e.expr1);
       let t2 = tcExpr(e.expr2);
 
+      if (!t1.type || !t2.type) {
+        throw new Error("Expr for binaryop should be of valid types");
+      }
+
       if (!binaryOpToMethod.has(e.op)) {
         throw new Error("Unknown binary operation '" + e.op + "'");
       }
@@ -98,6 +102,15 @@ export function tcExpr(e: Expr): Expr {
       if (!t1.type.methods.has(method)) {
         throw new Error("Unknown binary operation '" + e.op + "' for type " + t1.type.getName());
       }
+
+      if (method === "__is__") {
+        let t1TypeName = t1.type.getName();
+        let t2TypeName = t1.type.getName();
+        if (t1TypeName === "int" || t1TypeName === "bool" || t2TypeName === "int" || t2TypeName === "bool") {
+          throw new Error(`Invalid type for 'is': ${t1TypeName}, ${t2TypeName}`);
+        }
+      }
+
       if (!typeMatching(t1.type.methods.get(method).paramsType, [t2.type])) {
         let lstr = t1.type.getName();
         for (const t of t1.type.methods.get(method).paramsType) {
@@ -525,7 +538,7 @@ export function tcDefs(pd: PreDef) {
 export function tcProgram(p: Program, gm: MemoryManager, em: EnvManager) {
   globalMemory = gm;
   curEnv = em.getGlobalEnv();
-  
+
   for (const classDef of p.defs.classDefs) {
     loadClassDef(classDef);
   }

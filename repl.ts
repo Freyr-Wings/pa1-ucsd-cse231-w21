@@ -73,7 +73,7 @@ export class BasicREPL {
         let name = lastStmt.type.getName();
         if (name == "bool") {
           return {tag: "bool"};
-        } else if (name == "num") {
+        } else if (name == "int") {
           return {tag: "number"};
         } else if (name == "<None>") {
           return {tag: "none"};

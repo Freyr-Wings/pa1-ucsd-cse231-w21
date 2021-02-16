@@ -95,6 +95,7 @@ export class EnvManager {
     const objTypeName = "object";
     const objTypeGlobalName = curEnv.name + "$" + objTypeName;
     let objType: ClassType = new ClassType(objTypeGlobalName, null, -1);
+    
     curEnv.registerClass(objTypeName, objType);
     
     const boolTypeName = "bool";
@@ -110,6 +111,13 @@ export class EnvManager {
   
     for (const boolOp of boolOps) {
       boolType.methods.set(boolOp.getName(), boolOp);
+    }
+
+    const objOps: Array<FuncType> = [
+      new FuncType(objType.globalName + "$__is__", [objType], boolType),
+    ]
+    for (const objOp of objOps) {
+      objType.methods.set(objOp.getName(), objOp);
     }
   
     curEnv.registerClass(boolTypeName, boolType);
