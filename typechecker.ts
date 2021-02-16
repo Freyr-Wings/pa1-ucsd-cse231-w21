@@ -146,7 +146,7 @@ export function tcExpr(e: Expr): Expr {
         e.type = ct.attributes.get(e.property).type;
       } else if (ct.methods.has(e.property)) {
         e.funcType = ct.methods.get(e.property);
-        e.type = e.funcType.returnType;
+        // e.type = e.funcType.returnType;
       } else {
         throw new Error(`Unknown property for class ${owner.type.getName()}: ${e.property}`);
       }

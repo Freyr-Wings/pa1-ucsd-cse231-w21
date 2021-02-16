@@ -25,7 +25,8 @@ if(typeof process !== "undefined") {
 
 // const MEMORY_SIZE = 10;
 // const memory  = new WebAssembly.Memory({ initial: MEMORY_SIZE, maximum: MEMORY_SIZE });
-
+const globalMemory: MemoryManager = new MemoryManager(4);
+const envManager: EnvManager = new EnvManager();
 
 
 export async function run(source : string) : Promise<any> {
@@ -45,14 +46,12 @@ export async function run(source : string) : Promise<any> {
     // },
   };
 
-  const globalMemory: MemoryManager = new MemoryManager(4);
-  const envManager: EnvManager = new EnvManager();
-
   const compileResult = compiler.compile(source, importObject, globalMemory, envManager);
   
   // only for debugging
-  (window as any)["importObject"] = importObject;
+  // (window as any)["importObject"] = importObject;
   // (window as any)["wasmMemory"] = new Int32Array(importObject.js.mem.buffer);
+  (window as any)["wasmMemory"] = new Int32Array(globalMemory.memory.buffer);
 
   const wasmSource = compileResult.wasmSource;
 

@@ -301,7 +301,6 @@ function codeGenExpr(expr: Expr): Array<string> {
       }
 
       if (expr.caller.tag === "id") {
-        console.log("compile2:", expr);
         if (!expr.caller.funcType) {
           // print
           wasms = wasms.concat(codeGenExpr(expr.args[0]));
@@ -317,7 +316,7 @@ function codeGenExpr(expr: Expr): Array<string> {
       }
 
       // init
-      let classType = expr.type;
+      let classType = expr.type;  // the return type
       let funcType = expr.caller.funcType;
 
       if (expr.caller.tag === "id") {
@@ -367,7 +366,6 @@ function codeGenExpr(expr: Expr): Array<string> {
         )
       } else if (expr.caller.tag === "member") {
         fillPtrAndGetMethod = fillPtrAndGetMethod.concat(
-          setPointerWithOffsetAndExpr("SP", -1, codeGenExpr(expr.caller.owner)),  // set as the first arg
           updateRegisterWithOffset("SP", -1),
           getPointer("SP"),
           [`(i32.load)`],
@@ -379,8 +377,20 @@ function codeGenExpr(expr: Expr): Array<string> {
           getMethodFromPtr(expr.caller.owner.type, expr.caller.property)
         );
         wasms = wasms.concat(
-          codeGenMethodCall(fillPtrAndGetMethod, pushArgsExpr),
+          setPointerWithOffsetAndExpr("SP", -3, codeGenExpr(expr.caller.owner)),  // put ptr on stack
+          codeGenCallerInit(),
+          [`;; fillPtrAndGetMethod`],
+          fillPtrAndGetMethod,
+          [`;; pushArgsExpr`],
+          pushArgsExpr,
+          [`(call_indirect (type ${WASM_FUNC_TYPE}))`],
+          [`;; caller destroy`],
+          codeGenCallerDestroy(),
         );
+        
+        // wasms = wasms.concat(
+        //   codeGenMethodCall(fillPtrAndGetMethod, pushArgsExpr),
+        // );
       }
       break;
     }
@@ -673,6 +683,10 @@ export function compile(source: string, importObject: any, gm: MemoryManager, em
   //     print(1, ptr);
   //     return 0;
   //   },
+
+  //   none_abort: () => {
+  //     throw new Error("none ptr");
+  //   }
   // }
 
   importObject.imports = {
