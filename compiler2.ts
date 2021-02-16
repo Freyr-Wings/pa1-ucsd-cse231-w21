@@ -690,6 +690,10 @@ export function compile(source: string, importObject: any, gm: MemoryManager, em
     }
   }
 
+  if (!resultValue) {
+    resultValue = {tag: "none"};
+  }
+
   let initWASM: Array<string> = new Array();
   if (!globalMemory.initialized) {
     initWASM = initWASM.concat(
