@@ -6,6 +6,7 @@ import { parse } from "./parser";
 import { tcProgram } from "./typechecker";
 
 let globalMemory: MemoryManager;
+let envManager: EnvManager;
 let curEnv: Env;
 const MIN_SIZE = 4;
 const WASM_FUNC_TYPE = "$MYCOMPILERFUNC";
@@ -326,7 +327,7 @@ function codeGenExpr(expr: Expr): Array<string> {
         funcGlobalName = funcType.globalName;
       }
 
-      let iterEnv = Env.envMap.get(funcGlobalName);
+      let iterEnv = envManager.envMap.get(funcGlobalName);
       
 
       iterEnv.nameToVar.forEach((variable, name) => {
@@ -618,6 +619,7 @@ function print(type: number, value: number) {
 // 1. Set SP for globalenv as itself
 export function compile(source: string, importObject: any, gm: MemoryManager, em: EnvManager): CompileResult {
   globalMemory = gm;
+  envManager = em;
   curEnv = em.getGlobalEnv();
 
   const ast = parse(source);

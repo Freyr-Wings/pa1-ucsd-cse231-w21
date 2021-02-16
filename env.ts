@@ -9,17 +9,16 @@ export class Env {
   nameToClass: Map<string, ClassType>;
   nameToChildEnv: Map<string, Env>;
 
-  static envMap: Map<string, Env> = new Map();
-  static funcMap: Map<string, FuncType> = new Map();
-  static classMap: Map<string, ClassType> = new Map();
+  envManager: EnvManager;
 
-  constructor(name: string, parent: Env) {
+  constructor(name: string, parent: Env, envManager: EnvManager) {
     this.name = name;
     this.parent = parent;
     this.nameToVar = new Map();
     this.nameToFunc = new Map();
     this.nameToClass = new Map();
     this.nameToChildEnv = new Map();
+    this.envManager = envManager;
   }
 
   findVar(name: string): Variable {
@@ -65,24 +64,28 @@ export class Env {
   registerClass(name: string, cls: ClassType) {
     this.nameToClass.set(name, cls);
     // this.nameToChildEnv.set(name, env);
-    Env.classMap.set(cls.globalName, cls);
+    this.envManager.classMap.set(cls.globalName, cls);
     // Env.envMap.set(cls.globalName, env);
   }
 
   registerFunc(name: string, func: FuncType, env: Env) {
     this.nameToFunc.set(name, func);
     this.nameToChildEnv.set(name, env);
-    Env.funcMap.set(func.globalName, func);
-    Env.envMap.set(func.globalName, env);
+    this.envManager.funcMap.set(func.globalName, func);
+    this.envManager.envMap.set(func.globalName, env);
   }
 }
 
 export class EnvManager {
-  globalEnv: Env = new Env("", null);
+  envMap: Map<string, Env> = new Map();
+  funcMap: Map<string, FuncType> = new Map();
+  classMap: Map<string, ClassType> = new Map();
+
+  globalEnv: Env;
 
   constructor() {
-    this.globalEnv = new Env("", null);
-    Env.envMap.set(this.globalEnv.name, this.globalEnv);
+    this.globalEnv = new Env("", null, this);
+    this.envMap.set(this.globalEnv.name, this.globalEnv);
     this.initBuiltin();
   }
 
@@ -113,12 +116,12 @@ export class EnvManager {
       boolType.methods.set(boolOp.getName(), boolOp);
     }
 
-    const objOps: Array<FuncType> = [
-      new FuncType(objType.globalName + "$__is__", [objType], boolType),
-    ]
-    for (const objOp of objOps) {
-      objType.methods.set(objOp.getName(), objOp);
-    }
+    // const objOps: Array<FuncType> = [
+    //   new FuncType(objType.globalName + "$__is__", [objType], boolType),
+    // ]
+    // for (const objOp of objOps) {
+    //   objType.methods.set(objOp.getName(), objOp);
+    // }
   
     curEnv.registerClass(boolTypeName, boolType);
   

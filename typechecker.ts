@@ -41,6 +41,7 @@ export function typeMatching(t: Array<ClassType>, target: Array<ClassType>): boo
   return true;
 }
 
+let envManager: EnvManager;
 let curEnv: Env;
 let globalMemory: MemoryManager;
 
@@ -98,17 +99,19 @@ export function tcExpr(e: Expr): Expr {
       if (!binaryOpToMethod.has(e.op)) {
         throw new Error("Unknown binary operation '" + e.op + "'");
       }
+      
       let method = binaryOpToMethod.get(e.op);
-      if (!t1.type.methods.has(method)) {
-        throw new Error("Unknown binary operation '" + e.op + "' for type " + t1.type.getName());
-      }
-
       if (method === "__is__") {
         let t1TypeName = t1.type.getName();
         let t2TypeName = t1.type.getName();
         if (t1TypeName === "int" || t1TypeName === "bool" || t2TypeName === "int" || t2TypeName === "bool") {
           throw new Error(`Invalid type for 'is': ${t1TypeName}, ${t2TypeName}`);
         }
+        e.type = envManager.classMap.get("$bool");
+      }
+
+      if (!t1.type.methods.has(method)) {
+        throw new Error("Unknown binary operation '" + e.op + "' for type " + t1.type.getName());
       }
 
       if (!typeMatching(t1.type.methods.get(method).paramsType, [t2.type])) {
@@ -230,7 +233,7 @@ export function tcStmt(s: Stmt) {
     }
     case "return": {
       let te = tcExpr(s.expr);
-      let expectedType = Env.funcMap.get(curEnv.name).returnType;
+      let expectedType = envManager.funcMap.get(curEnv.name).returnType;
       if (!expectedType.hasDescendant(te.type)) {
         throw new Error("Expect type " + expectedType.getName() + ", get type " + te.type.getName());
       }
@@ -252,13 +255,13 @@ export function tcLiteral(l: Literal): ClassType {
   switch(l.tag) {
     case "True":
     case "False": {
-      return Env.classMap.get("$bool");
+      return envManager.classMap.get("$bool");
     }
     case "None": {
-      return Env.classMap.get("$<None>");
+      return envManager.classMap.get("$<None>");
     }
     case "number": {
-      return Env.classMap.get("$int");
+      return envManager.classMap.get("$int");
     }
   }
 }
@@ -327,7 +330,7 @@ export function loadFuncDef(fd: FuncDef) {
   }
 
   let globalName = curEnv.name + "$" + fd.name;
-  let newEnv: Env = new Env(globalName, curEnv);
+  let newEnv: Env = new Env(globalName, curEnv, envManager);
 
   let paramsType: Array<ClassType> = [];
 
@@ -397,7 +400,7 @@ export function tcAttributesDef(ct: ClassType, vd: VarDef) {
 
 export function loadMethodDef(ct: ClassType, fd: FuncDef) {
   let globalName = `${curEnv.name}$${ct.getName()}#${fd.name}`;
-  let newEnv: Env = new Env(globalName, curEnv);
+  let newEnv: Env = new Env(globalName, curEnv, envManager);
 
   let paramsType: Array<ClassType> = [];
 
@@ -536,7 +539,9 @@ export function tcDefs(pd: PreDef) {
 }
 
 export function tcProgram(p: Program, gm: MemoryManager, em: EnvManager) {
+
   globalMemory = gm;
+  envManager = em;
   curEnv = em.getGlobalEnv();
 
   for (const classDef of p.defs.classDefs) {

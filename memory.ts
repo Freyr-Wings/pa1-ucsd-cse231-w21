@@ -44,7 +44,7 @@ export class MemoryManager {
   }
 }
 
-export const globalMemory: MemoryManager = new MemoryManager(4);
+// export const globalMemory: MemoryManager = new MemoryManager(4);
 // (window as any)["wasmMemory"] = new Int32Array(globalMemory.memory.buffer);
 
 
