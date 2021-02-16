@@ -6,6 +6,8 @@
 import wabt from 'wabt';
 import { Value } from './ast';
 import * as compiler from './compiler2';
+import { EnvManager } from './env';
+import { MemoryManager } from './memory';
 
 // NOTE(joe): This is a hack to get the CLI Repl to run. WABT registers a global
 // uncaught exn handler, and this is not allowed when running the REPL
@@ -21,27 +23,32 @@ if(typeof process !== "undefined") {
   };
 }
 
-const MEMORY_SIZE = 10;
-const memory  = new WebAssembly.Memory({ initial: MEMORY_SIZE, maximum: MEMORY_SIZE });
+// const MEMORY_SIZE = 10;
+// const memory  = new WebAssembly.Memory({ initial: MEMORY_SIZE, maximum: MEMORY_SIZE });
+
+
 
 export async function run(source : string) : Promise<any> {
   const wabtInterface = await wabt();
   
   const importObject = {
-    js: { mem: memory },
-    imports: {
-      print: (value: number) => {
-        console.log("Logging from WASM: ", value);
-        const elt = document.createElement("pre");
-        document.getElementById("output").appendChild(elt);
-        let text = value.toString();
-        elt.innerText = text;
-        return value
-      },
-    },
+    // js: { mem: memory },
+    // imports: {
+    //   print: (value: number) => {
+    //     console.log("Logging from WASM: ", value);
+    //     const elt = document.createElement("pre");
+    //     document.getElementById("output").appendChild(elt);
+    //     let text = value.toString();
+    //     elt.innerText = text;
+    //     return value
+    //   },
+    // },
   };
 
-  const compileResult = compiler.compile(source, importObject);
+  const globalMemory: MemoryManager = new MemoryManager(4);
+  const envManager: EnvManager = new EnvManager();
+
+  const compileResult = compiler.compile(source, importObject, globalMemory, envManager);
   
   // only for debugging
   (window as any)["importObject"] = importObject;

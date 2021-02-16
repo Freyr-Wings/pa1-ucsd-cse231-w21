@@ -1,12 +1,12 @@
 import { wasm } from "webpack";
 import { ClassDef, ClassType, Expr, FuncDef, FuncType, Literal, Program, Stmt, Value, VarDef } from "./ast";
-import { envManager, Env } from "./env";
-import { globalMemory, MemoryManager } from "./memory";
+import { Env, EnvManager } from "./env";
+import { MemoryManager } from "./memory";
 import { parse } from "./parser";
 import { tcProgram } from "./typechecker";
 
-
-let curEnv = envManager.getGlobalEnv();
+let globalMemory: MemoryManager;
+let curEnv: Env;
 const MIN_SIZE = 4;
 const WASM_FUNC_TYPE = "$MYCOMPILERFUNC";
 const WASM_FUNC_TYPE_DEF = `(type ${WASM_FUNC_TYPE} (func (result i32)))`
@@ -616,10 +616,13 @@ function print(type: number, value: number) {
 
 // TODO:
 // 1. Set SP for globalenv as itself
-export function compile(source: string, importObject: any): CompileResult {
+export function compile(source: string, importObject: any, gm: MemoryManager, em: EnvManager): CompileResult {
+  globalMemory = gm;
+  curEnv = em.getGlobalEnv();
+
   const ast = parse(source);
   console.log(ast);
-  tcProgram(ast);
+  tcProgram(ast, gm, em);
   console.log(curEnv);
 
   importObject.js = {mem: globalMemory.memory}
@@ -675,7 +678,9 @@ export function compile(source: string, importObject: any): CompileResult {
       returnType = "(result i32)";
       returnExpr = "(local.get $$last)";
       let lastExpr = ast.stmts[ast.stmts.length - 1];
-      if (lastExpr.type.getName() === "int") {
+      if (!lastExpr.type) {
+        resultValue = {tag: "none"};
+      } else if (lastExpr.type.getName() === "int") {
         resultValue = {tag: "num", value: 0};
       } else if (lastExpr.type.getName() === "bool") {
         resultValue = {tag: "bool", value: false};

@@ -1,6 +1,6 @@
 import { Expr, FuncBody, FuncDef, PreDef, Program, Stmt, TypedVar, VarDef, Type, Literal, VarName, ClassType, FuncType, ClassDef, Variable } from "./ast";
-import { Env, envManager } from "./env";
-import { globalMemory, MemoryManager } from "./memory";
+import { Env, EnvManager } from "./env";
+import { MemoryManager } from "./memory";
 
 export type TypedExpr = {
   expr: Expr,
@@ -41,7 +41,8 @@ export function typeMatching(t: Array<ClassType>, target: Array<ClassType>): boo
   return true;
 }
 
-let curEnv = envManager.getGlobalEnv();
+let curEnv: Env;
+let globalMemory: MemoryManager;
 
 // static type checker
 
@@ -521,7 +522,10 @@ export function tcDefs(pd: PreDef) {
   }
 }
 
-export function tcProgram(p: Program) {
+export function tcProgram(p: Program, gm: MemoryManager, em: EnvManager) {
+  globalMemory = gm;
+  curEnv = em.getGlobalEnv();
+  
   for (const classDef of p.defs.classDefs) {
     loadClassDef(classDef);
   }

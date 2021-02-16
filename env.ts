@@ -1,6 +1,5 @@
 import { Func } from "mocha";
 import { Variable, FuncType, ClassType } from "./ast";
-import { globalMemory } from "./memory"
 
 export class Env {
   name: string;
@@ -157,4 +156,3 @@ export class EnvManager {
   }
 }
 
-export const envManager = new EnvManager();

@@ -3,7 +3,8 @@ import wabt from 'wabt';
 import * as compiler from './compiler2';
 import { tcProgram } from './typechecker';
 import { parse } from './parser';
-import { globalMemory } from './memory';
+import { MemoryManager } from './memory';
+import { EnvManager } from "./env";
 
 // interface REPL {
 //   run(source : string) : Promise<any>;
@@ -12,11 +13,13 @@ import { globalMemory } from './memory';
 export class BasicREPL {
   
   importObject: any;
+  globalMemory: MemoryManager = new MemoryManager(4);
+  envManager: EnvManager = new EnvManager();
 
   constructor(importObject: any) { 
     this.importObject = importObject;
     if(!importObject.js) {
-      this.importObject.js = { memory: globalMemory.memory };
+      this.importObject.js = { memory: this.globalMemory.memory };
     }
   }
 
@@ -28,7 +31,7 @@ export class BasicREPL {
     //   imports: {},
     // };
 
-    const compileResult = compiler.compile(source, this.importObject);
+    const compileResult = compiler.compile(source, this.importObject, this.globalMemory, this.envManager);
     const wasmSource = compileResult.wasmSource;
 
     const myModule = wabtInterface.parseWat("test.wat", wasmSource);
@@ -56,7 +59,7 @@ export class BasicREPL {
 
   async tc(source: string): Promise<Type> {
     const prog = parse(source);
-    tcProgram(prog);
+    tcProgram(prog, this.globalMemory, this.envManager);
 
     console.log(prog.stmts.length);
     if (prog.stmts.length == 0) {
