@@ -41,9 +41,9 @@ export function typeMatching(t: Array<ClassType>, target: Array<ClassType>): boo
   return true;
 }
 
-let envManager: EnvManager;
 let curEnv: Env;
-let globalMemory: MemoryManager;
+let envManager: EnvManager;
+let memoryManager: MemoryManager;
 
 // static type checker
 
@@ -217,9 +217,9 @@ export function tcStmt(s: Stmt) {
     }
     case "if": {
       s.exprs.forEach(element => {
-        let t = tcExpr(element);
-        if (t.type.getName() !== "bool") {
-          throw new Error("Expect bool type, get type " + t.type.getName());
+        let te = tcExpr(element);
+        if (te.type.getName() !== "bool") {
+          throw new Error("Expect bool type, get type " + te.type.getName());
         }
       });
       s.blocks.forEach(stmts => {
@@ -242,11 +242,15 @@ export function tcStmt(s: Stmt) {
       return;
     }
     case "while": {
-      let t = tcExpr(s.expr);
-      if (t.type.globalName !== "$bool") {
-        throw new Error("Expect bool type, get type " + t.type.getName());
+      let te = tcExpr(s.expr);
+      if (te.type.globalName !== "$bool") {
+        throw new Error("Expect bool type, get type " + te.type.getName());
       }
 
+      return;
+    }
+    case "print": {
+      tcExpr(s.expr);
       return;
     }
   }
@@ -448,12 +452,14 @@ export function tcMethodDef(ct: ClassType, fd: FuncDef) {
   let memberFunc = curEnv.nameToFunc.get(`${ct.getName()}#${fd.name}`);
   ct.methods.set(fd.name, memberFunc);
 
+  if (!ct.methodPtrs.has(fd.name)) {
+    ct.methodPtrs.set(fd.name, ct.methodPtrs.size);
+  }
   
-  ct.methodPtrs.set(fd.name, ct.methodPtrs.size);
 
   console.log(ct);
 
-  globalMemory.collectFunc(memberFunc.globalName);
+  memoryManager.collectFunc(memberFunc.globalName);
 }
 
 export function loadClassDef(cd: ClassDef) {
@@ -477,6 +483,7 @@ export function loadClassDef(cd: ClassDef) {
   // let newEnv: Env = new Env(globalName, envManager.getGlobalEnv());  // shouldn't access variable outside the class
   let classType: ClassType = new ClassType(globalName, parentType, -1);
   curEnv.registerClass(cd.name, classType);
+  memoryManager.classNameToTag.set(globalName, memoryManager.classNameToTag.size);
 }
 
 export function tcClassDef(cd: ClassDef) {
@@ -517,8 +524,8 @@ export function tcClassDef(cd: ClassDef) {
     tcMethodDef(classType, funcDef); 
   }
 
-  classType.methodPtrsHead = globalMemory.dispatchTablePtr;
-  globalMemory.dispatchTablePtr += classType.methods.size;
+  classType.methodPtrsHead = memoryManager.dispatchTablesSize;
+  memoryManager.dispatchTablesSize += classType.methods.size;
 
   classType.size = classType.headerSize + classType.attributes.size;
 
@@ -541,7 +548,7 @@ export function tcDefs(pd: PreDef) {
 
 export function tcProgram(p: Program, gm: MemoryManager, em: EnvManager) {
 
-  globalMemory = gm;
+  memoryManager = gm;
   envManager = em;
   curEnv = em.getGlobalEnv();
 

@@ -1,6 +1,6 @@
 import { Value, Type } from "./ast";
 import wabt from 'wabt';
-import * as compiler from './compiler2';
+import * as compiler from './compiler';
 import { tcProgram } from './typechecker';
 import { parse } from './parser';
 import { MemoryManager } from './memory';
@@ -13,7 +13,7 @@ import { EnvManager } from "./env";
 export class BasicREPL {
   
   importObject: any;
-  globalMemory: MemoryManager = new MemoryManager(4);
+  globalMemory: MemoryManager = new MemoryManager();
   envManager: EnvManager = new EnvManager();
 
   constructor(importObject: any) { 

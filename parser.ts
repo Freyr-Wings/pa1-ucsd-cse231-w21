@@ -250,7 +250,19 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt {
     case "ExpressionStatement": {
       c.firstChild();
       const expr = traverseExpr(c, s);
-      c.parent(); // pop going into stmt
+      c.parent();
+      if (expr.tag === "call" && expr.caller.tag === "id" && expr.caller.name === "print") {
+        if (expr.args.length !== 1) {
+          // TODO: error
+        }
+        return {
+          tag: "print",
+          expr: expr.args[0],
+          cursor: c.node,
+          type: null,
+        }
+      }
+
       return { 
         tag: "expr", 
         expr,
@@ -262,7 +274,6 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt {
     default: {
       throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to));
     }
-      
   }
 }
 
@@ -387,7 +398,6 @@ export function traverseDefs(c : TreeCursor, s : string) : [PreDef, boolean] {
         if (!(c.node.firstChild && c.node.firstChild.nextSibling && c.node.firstChild.nextSibling.type.name === "TypeDef")) {
           end = true;
           break;
-          // throw new Error("Expect var_def at " + c.node.from + " " + c.node.to);
         }
         varDefs.push(traverseVarDef(c, s));
         break;

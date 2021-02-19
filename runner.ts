@@ -5,7 +5,7 @@
 
 import wabt from 'wabt';
 import { Value } from './ast';
-import * as compiler from './compiler2';
+import * as compiler from './compiler';
 import { EnvManager } from './env';
 import { MemoryManager } from './memory';
 
@@ -25,7 +25,7 @@ if(typeof process !== "undefined") {
 
 // const MEMORY_SIZE = 10;
 // const memory  = new WebAssembly.Memory({ initial: MEMORY_SIZE, maximum: MEMORY_SIZE });
-const globalMemory: MemoryManager = new MemoryManager(4);
+const globalMemory: MemoryManager = new MemoryManager();
 const envManager: EnvManager = new EnvManager();
 
 

@@ -42,6 +42,7 @@ export type Stmt =
     | { tag: "pass" }
     | { tag: "return", expr: Expr }
     | { tag: "expr", expr: Expr }
+    | { tag: "print", expr: Expr }
   )
 
 export type Expr =
@@ -118,10 +119,6 @@ export class ClassType {
   public getName(): string {
     let components = this.globalName.split("$");
     return components[components.length - 1];
-  }
-
-  public registerFunc(funcType: FuncType) {
-
   }
 
   public hasDescendant(descendant: ClassType): boolean {

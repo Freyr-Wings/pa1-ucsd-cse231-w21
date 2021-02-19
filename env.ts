@@ -1,4 +1,3 @@
-import { Func } from "mocha";
 import { Variable, FuncType, ClassType } from "./ast";
 
 export class Env {
