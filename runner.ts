@@ -4,7 +4,6 @@
 // - https://developer.mozilla.org/en-US/docs/WebAssembly/Using_the_JavaScript_API
 
 import wabt from 'wabt';
-import { Value } from './ast';
 import * as compiler from './compiler';
 import { EnvManager } from './env';
 import { MemoryManager } from './memory';

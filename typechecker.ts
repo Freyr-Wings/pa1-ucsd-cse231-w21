@@ -1,4 +1,4 @@
-import { Expr, FuncBody, FuncDef, PreDef, Program, Stmt, TypedVar, VarDef, Type, Literal, VarName, ClassType, FuncType, ClassDef, Variable } from "./ast";
+import { Expr, FuncBody, FuncDef, PreDef, Program, Stmt, TypedVar, VarDef, Literal, VarName, ClassType, FuncType, ClassDef, Variable } from "./ast";
 import { Env, EnvManager } from "./env";
 import { MemoryManager } from "./memory";
 
@@ -72,17 +72,11 @@ export function tcExpr(e: Expr): Expr {
         let initFunc = asClass.methods.get("__init__");
         console.log(initFunc);
         if (initFunc) {
-          console.log("yes", initFunc.paramsType);
           e.funcType = new FuncType(asClass.globalName + "$##init", initFunc.paramsType, asClass);
         } else {
           e.funcType = new FuncType(asClass.globalName + "$##init", [asClass], asClass);
         }
-        // let paramsType: Array<ClassType> = [];
-        // for (let i = 1; i < initFunc.paramsType.length; i++) {
-        //   paramsType.push(initFunc.paramsType[i]);
-        // }
-        // e.funcType = new FuncType(asClass.globalName + "$#init", paramsType, asClass);
-        
+
         return e;
       }
       
@@ -153,18 +147,6 @@ export function tcExpr(e: Expr): Expr {
       return e;
     }
     case "call": {
-      if (e.caller.tag === "id") {
-        if (e.caller.name === "print") {
-          if (e.args.length !== 1) {
-            throw new Error(`Expect 1 params for print`);
-          }
-          // let postfix = e.args[0].type.getName();
-          // e.caller.funcType = curEnv.findFunc(`print#${postfix}`);
-          tcExpr(e.args[0]);
-          return e;
-        }
-      }
-
       let caller = tcExpr(e.caller);
       
       if (!(caller.tag === "id" || caller.tag === "member")) {

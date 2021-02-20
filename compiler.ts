@@ -1,4 +1,4 @@
-import { ClassDef, ClassType, Expr, FuncDef, FuncType, Literal, Program, Stmt, Value, VarDef } from "./ast";
+import { ClassDef, ClassType, Expr, FuncDef, FuncType, Literal, Program, Stmt, VarDef } from "./ast";
 import { Env, EnvManager } from "./env";
 import { MemoryManager } from "./memory";
 import { parse } from "./parser";
@@ -273,7 +273,6 @@ function codeGenExpr(expr: Expr): Array<string> {
     case "call": {
       // member
       // init
-      // print
       if (expr.caller.tag !== "member" && expr.caller.tag !== "id") {
         break;
       }
@@ -592,34 +591,7 @@ function codeGenProgram(p: Program): Array<Array<string>> {
 
 type CompileResult = {
   wasmSource: string,
-  resultValue: Value,
 };
-
-function print(type: number, value: number) {
-  console.log("Logging from WASM: ", type, ", ", value);
-  const elt = document.createElement("pre");
-  document.getElementById("output").appendChild(elt);
-  let text = "";
-  if (type === 1) {
-    if (value === 0) {
-      text = "False";
-    } else {
-      text = "True";
-    }
-  } else if (type === 2) {
-    text = value.toString();
-  } else {
-    if (value === 0) {
-      text = "None";
-    } else {
-      text = value.toString();
-    }
-    
-  }
-  elt.innerText = text;
-  return value
-}
-
 
 export function compile(source: string, importObject: any, gm: MemoryManager, em: EnvManager): CompileResult {
   memoryManager = gm;
@@ -632,22 +604,19 @@ export function compile(source: string, importObject: any, gm: MemoryManager, em
   console.log(curEnv);
 
   importObject.js = {mem: memoryManager.memory}
-
-  let memorySizeByte = importObject.js.mem.buffer.byteLength;
   importObject.imports = {
-
     print_obj: (ptr: number) => {
-      print(-1, ptr);
+      importObject.builtin.print(-1, ptr);
       return 0;
     },
 
     print_int: (val: number) => {
-      print(2, val);
+      importObject.builtin.print(2, val);
       return 0;
     },
 
     print_bool: (val: number) => {
-      print(1, val);
+      importObject.builtin.print(1, val);
       return 0;
     },
 
@@ -661,57 +630,12 @@ export function compile(source: string, importObject: any, gm: MemoryManager, em
     },
   }
 
-  // importObject.imports = {
-
-  //   print_obj: (ptr: number) => {
-  //     importObject.output += ptr ? "clsname" : "None";
-  //     importObject.output += "\n";
-  //     return 0;
-  //   },
-
-  //   print_int: (ptr: number) => {
-  //     importObject.output += ptr.toString();
-  //     importObject.output += "\n";
-  //     return 0;
-  //   },
-
-  //   print_bool: (ptr: number) => {
-  //     importObject.output += ptr ? "True" : "False";;
-  //     importObject.output += "\n";
-  //     return 0;
-  //   },
-
-  //   none_abort: () => {
-  //     throw new Error("none ptr");
-  //   }
-  // }
+  let memorySizeByte = importObject.js.mem.buffer.byteLength;
 
   const wasms = codeGenProgram(ast);
   let returnType = "";
   let returnExpr = "";
   let scratchVar = "(local $$last i32)";
-  let resultValue: Value;
-
-  if (ast.stmts.length > 0) {
-    if(ast.stmts[ast.stmts.length - 1].tag === "expr") {
-      returnType = "(result i32)";
-      returnExpr = "(local.get $$last)";
-      let lastExpr = ast.stmts[ast.stmts.length - 1];
-      if (!lastExpr.type) {
-        resultValue = {tag: "none"};
-      } else if (lastExpr.type.getName() === "int") {
-        resultValue = {tag: "num", value: 0};
-      } else if (lastExpr.type.getName() === "bool") {
-        resultValue = {tag: "bool", value: false};
-      } else {
-        resultValue = {tag: "object", address: 0, name: lastExpr.type.getName()};
-      }
-    }
-  }
-
-  if (!resultValue) {
-    resultValue = {tag: "none"};
-  }
 
   let initWASM: Array<string> = new Array();
   if (!memoryManager.initialized) {
@@ -756,6 +680,5 @@ export function compile(source: string, importObject: any, gm: MemoryManager, em
   console.log(wasmSource);
   return {
     wasmSource,
-    resultValue,
   };
 }

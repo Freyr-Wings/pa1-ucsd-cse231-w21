@@ -1,10 +1,39 @@
-import { run } from './runner';
-
+import { BasicREPL } from './repl';
 
 document.addEventListener("DOMContentLoaded", function () {
 
-  // const env = emptyEnv;
-  // var repl = new BasicREPL(importObject);
+  function print(type: number, value: number) {
+    console.log("Logging from WASM: ", type, ", ", value);
+    const elt = document.createElement("pre");
+    document.getElementById("output").appendChild(elt);
+    let text = "";
+    if (type === 1) {
+      if (value === 0) {
+        text = "False";
+      } else {
+        text = "True";
+      }
+    } else if (type === 2) {
+      text = value.toString();
+    } else {
+      if (value === 0) {
+        text = "None";
+      } else {
+        text = value.toString();
+      }
+      
+    }
+    elt.innerText = text;
+    return value
+  }
+
+  let importObject = {
+    builtin: {
+      print: print,
+    }
+  }
+  
+  var repl = new BasicREPL(importObject);
 
   function renderResult(result: any): void {
     if (result === undefined) { console.log("skip"); return; }
@@ -46,7 +75,7 @@ document.addEventListener("DOMContentLoaded", function () {
         replCodeElement.value = "";
 
         // print output
-        run(source).then((r) => {
+        repl.run(source).then((r) => {
           renderResult(r);
           console.log("run finished")
         }).catch((e) => {
@@ -61,10 +90,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // clear last results
     document.getElementById("output").innerHTML = "";
 
-    // repl = new BasicREPL(importObject);
+    repl = new BasicREPL(importObject);
     const source = (document.getElementById("user-code") as HTMLTextAreaElement).value;
     setupRepl();
-    run(source).then((r) => {
+    repl.run(source).then((r) => {
       renderResult(r);
       console.log("run finished");
     }).catch((e) => {

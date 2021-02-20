@@ -1,37 +1,26 @@
-import { Value, Type } from "./ast";
 import wabt from 'wabt';
 import * as compiler from './compiler';
-import { tcProgram } from './typechecker';
-import { parse } from './parser';
 import { MemoryManager } from './memory';
 import { EnvManager } from "./env";
+import { Type } from "./ast";
+import { parse } from "./parser";
+import { tcProgram } from './typechecker';
 
-// interface REPL {
-//   run(source : string) : Promise<any>;
-// }
 
 export class BasicREPL {
-  
   importObject: any;
-  globalMemory: MemoryManager = new MemoryManager();
+  memoryManager: MemoryManager = new MemoryManager();
   envManager: EnvManager = new EnvManager();
 
   constructor(importObject: any) { 
     this.importObject = importObject;
-    if(!importObject.js) {
-      this.importObject.js = { memory: this.globalMemory.memory };
-    }
+    this.importObject.js = { memory: this.memoryManager.memory };
   }
 
-  async run(source: string): Promise<Value> {
+  async run(source: string): Promise<any> {
     const wabtInterface = await wabt();
 
-    // const importObject = {
-    //   js: { mem: this.memory },
-    //   imports: {},
-    // };
-
-    const compileResult = compiler.compile(source, this.importObject, this.globalMemory, this.envManager);
+    const compileResult = compiler.compile(source, this.importObject, this.memoryManager, this.envManager);
     const wasmSource = compileResult.wasmSource;
 
     const myModule = wabtInterface.parseWat("test.wat", wasmSource);
@@ -39,35 +28,18 @@ export class BasicREPL {
     var wasmModule = await WebAssembly.instantiate(asBinary.buffer, this.importObject);
     const result = await (wasmModule.instance.exports.exported_func as any)();
     
-    const resultValue = compileResult.resultValue;
-    if (resultValue.tag == "bool") {
-      if (Number(result) == 1) {
-        resultValue.value = true;
-      } else {
-        resultValue.value = true;
-      }
-    } else if (resultValue.tag == "num") {
-      resultValue.value = Number(result);
-    } else if (resultValue.tag == "object") {
-      resultValue.address = Number(result);
-      if (resultValue.address === 0) {
-        return {tag: "none"};
-      }
-    }
-    return resultValue;
+    return result
   }
 
   async tc(source: string): Promise<Type> {
     const prog = parse(source);
-    tcProgram(prog, this.globalMemory, this.envManager);
-
+    tcProgram(prog, this.memoryManager, this.envManager);
     console.log(prog.stmts.length);
     if (prog.stmts.length == 0) {
       return {tag: "none"}; 
     }
 
     const lastStmt = prog.stmts[prog.stmts.length-1];
-    
     if (lastStmt.tag === "expr") {
       if (lastStmt.type) {
         let name = lastStmt.type.getName();
@@ -82,7 +54,6 @@ export class BasicREPL {
         } 
       }
     }
-
     return {tag: "none"};
   }
 }
