@@ -72,10 +72,11 @@ export function tcExpr(e: Expr): Expr {
         let initFunc = asClass.methods.get("__init__");
         console.log(initFunc);
         if (initFunc) {
-          e.funcType = new FuncType(asClass.globalName + "$##init", initFunc.paramsType, asClass);
+          e.funcType = new FuncType(asClass.globalName + "$##init", initFunc.paramsType, asClass, true);
         } else {
-          e.funcType = new FuncType(asClass.globalName + "$##init", [asClass], asClass);
+          e.funcType = new FuncType(asClass.globalName + "$##init", [asClass], asClass, true);
         }
+        e.classType = asClass;
 
         return e;
       }
@@ -109,7 +110,7 @@ export function tcExpr(e: Expr): Expr {
         throw new Error("Unknown binary operation '" + e.op + "' for type " + t1.type.getName());
       }
 
-      if (!typeMatching(t1.type.methods.get(method).paramsType, [t2.type])) {
+      if (!typeMatching(t1.type.methods.get(method).paramsType.slice(1), [t2.type])) {
         let lstr = t1.type.getName();
         for (const t of t1.type.methods.get(method).paramsType) {
           lstr += "," + t.getName();
@@ -140,7 +141,6 @@ export function tcExpr(e: Expr): Expr {
         e.type = ct.attributes.get(e.property).type;
       } else if (ct.methods.has(e.property)) {
         e.funcType = ct.methods.get(e.property);
-        // e.type = e.funcType.returnType;
       } else {
         throw new Error(`Unknown property for class ${owner.type.getName()}: ${e.property}`);
       }
@@ -165,9 +165,9 @@ export function tcExpr(e: Expr): Expr {
       }
 
       let paramsType = ft.paramsType;
-      // if (caller.tag === "member") {
+      if (ft.isMemberFunc) {
         paramsType = paramsType.slice(1);
-      // }
+      }
       if (!typeMatching(exprTypes, paramsType)) {
         throw new Error(`Function params not match: ${ft.globalName}, expect [${
           paramsType.map((e)=>e.getName()).join(",")
@@ -342,7 +342,7 @@ export function loadFuncDef(fd: FuncDef) {
     throw new Error(`Unknown return type: ${fd.retType}`);
   }
 
-  let funcType: FuncType = new FuncType(globalName, paramsType, returnType);
+  let funcType: FuncType = new FuncType(globalName, paramsType, returnType, false);
   
   curEnv.registerFunc(fd.name, funcType, newEnv);
 }
@@ -357,6 +357,9 @@ export function tcFuncDef(fd: FuncDef) {
     }
   }
   curEnv = curEnv.parent;
+
+  let ft = curEnv.nameToFunc.get(fd.name);
+  memoryManager.collectFunc(ft.globalName);
 }
 
 export function tcAttributesDef(ct: ClassType, vd: VarDef) {
@@ -412,7 +415,7 @@ export function loadMethodDef(ct: ClassType, fd: FuncDef) {
     throw new Error(`Unknown return type: ${fd.retType}`);
   }
 
-  let funcType: FuncType = new FuncType(globalName, paramsType, returnType);
+  let funcType: FuncType = new FuncType(globalName, paramsType, returnType, true);
   
   curEnv.registerFunc(`${ct.getName()}#${fd.name}`, funcType, newEnv);
 }
@@ -438,9 +441,7 @@ export function tcMethodDef(ct: ClassType, fd: FuncDef) {
     ct.methodPtrs.set(fd.name, ct.methodPtrs.size);
   }
   
-
   console.log(ct);
-
   memoryManager.collectFunc(memberFunc.globalName);
 }
 
@@ -462,7 +463,6 @@ export function loadClassDef(cd: ClassDef) {
     throw new Error(`Can't extend builtin type: ${cd.parent}`);
   }
 
-  // let newEnv: Env = new Env(globalName, envManager.getGlobalEnv());  // shouldn't access variable outside the class
   let classType: ClassType = new ClassType(globalName, parentType, -1);
   curEnv.registerClass(cd.name, classType);
   memoryManager.classNameToTag.set(globalName, memoryManager.classNameToTag.size);
@@ -470,7 +470,6 @@ export function loadClassDef(cd: ClassDef) {
 
 export function tcClassDef(cd: ClassDef) {
   let classType = curEnv.nameToClass.get(cd.name);
-  // curEnv = curEnv.nameToChildEnv.get(cd.name);
 
   if (classType.parent) {
     classType.parent.attributes.forEach((v, name) => {
@@ -512,24 +511,21 @@ export function tcClassDef(cd: ClassDef) {
   classType.size = classType.headerSize + classType.attributes.size;
 
   console.log(classType);
-
-  // curEnv = curEnv.parent;
 }
 
 export function tcDefs(pd: PreDef) {
   for (const classDef of pd.classDefs) {
     tcClassDef(classDef);
   }
-  // for (const funcDef of pd.funcDefs) {
-  //   tcFuncDef(funcDef);
-  // }
+  for (const funcDef of pd.funcDefs) {
+    tcFuncDef(funcDef);
+  }
   for (const varDef of pd.varDefs) {
     tcVarDef(varDef);
   }
 }
 
 export function tcProgram(p: Program, gm: MemoryManager, em: EnvManager) {
-
   memoryManager = gm;
   envManager = em;
   curEnv = em.getGlobalEnv();
@@ -537,9 +533,9 @@ export function tcProgram(p: Program, gm: MemoryManager, em: EnvManager) {
   for (const classDef of p.defs.classDefs) {
     loadClassDef(classDef);
   }
-  // for (const funcDef of p.defs.funcDefs) {
-  //   loadFuncDef(funcDef);
-  // }
+  for (const funcDef of p.defs.funcDefs) {
+    loadFuncDef(funcDef);
+  }
   tcDefs(p.defs);
   for (const stmt of p.stmts) {
     tcStmt(stmt);

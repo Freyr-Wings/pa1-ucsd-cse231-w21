@@ -104,11 +104,11 @@ export class EnvManager {
     let boolType: ClassType = new ClassType(curEnv.name + "$" + boolTypeName, objType, 1);
   
     const boolOps: Array<FuncType> = [
-      new FuncType(boolType.globalName + "$__eq__", [boolType], boolType),
-      new FuncType(boolType.globalName + "$__neq__", [boolType], boolType),
-      new FuncType(boolType.globalName + "$__and__", [boolType], boolType),
-      new FuncType(boolType.globalName + "$__or__", [boolType], boolType),
-      new FuncType(boolType.globalName + "$__not__", [], boolType),
+      new FuncType(boolType.globalName + "$__eq__", [boolType, boolType], boolType, true),
+      new FuncType(boolType.globalName + "$__neq__", [boolType, boolType], boolType, true),
+      new FuncType(boolType.globalName + "$__and__", [boolType, boolType], boolType, true),
+      new FuncType(boolType.globalName + "$__or__", [boolType, boolType], boolType, true),
+      new FuncType(boolType.globalName + "$__not__", [boolType], boolType, true),
     ]
   
     for (const boolOp of boolOps) {
@@ -128,20 +128,20 @@ export class EnvManager {
     let intType: ClassType = new ClassType(curEnv.name + "$" + intTypeName, objType, 2);
   
     const intOps: Array<FuncType> = [
-      new FuncType(intType.globalName + "$__neg__", [], intType),
+      new FuncType(intType.globalName + "$__neg__", [intType], intType, true),
   
-      new FuncType(intType.globalName + "$__add__", [intType], intType),
-      new FuncType(intType.globalName + "$__sub__", [intType], intType),
-      new FuncType(intType.globalName + "$__mul__", [intType], intType),
-      new FuncType(intType.globalName + "$__divn__", [intType], intType),
-      new FuncType(intType.globalName + "$__mod__", [intType], intType),
+      new FuncType(intType.globalName + "$__add__", [intType, intType], intType, true),
+      new FuncType(intType.globalName + "$__sub__", [intType, intType], intType, true),
+      new FuncType(intType.globalName + "$__mul__", [intType, intType], intType, true),
+      new FuncType(intType.globalName + "$__divn__", [intType, intType], intType, true),
+      new FuncType(intType.globalName + "$__mod__", [intType, intType], intType, true),
   
-      new FuncType(intType.globalName + "$__eq__", [intType], boolType),
-      new FuncType(intType.globalName + "$__neq__", [intType], boolType),
-      new FuncType(intType.globalName + "$__le__", [intType], boolType),
-      new FuncType(intType.globalName + "$__ge__", [intType], boolType),
-      new FuncType(intType.globalName + "$__lt__", [intType], boolType),
-      new FuncType(intType.globalName + "$__gt__", [intType], boolType),
+      new FuncType(intType.globalName + "$__eq__", [intType, intType], boolType, true),
+      new FuncType(intType.globalName + "$__neq__", [intType, intType], boolType, true),
+      new FuncType(intType.globalName + "$__le__", [intType, intType], boolType, true),
+      new FuncType(intType.globalName + "$__ge__", [intType, intType], boolType, true),
+      new FuncType(intType.globalName + "$__lt__", [intType, intType], boolType, true),
+      new FuncType(intType.globalName + "$__gt__", [intType, intType], boolType, true),
     ]
   
     for (const intOp of intOps) {
@@ -155,9 +155,9 @@ export class EnvManager {
     curEnv.registerClass(noneTypeName, noneType);
   
     const builtinFuncs: Array<FuncType> = [
-      new FuncType(curEnv.name + "$" + "print#" + objTypeName, [objType], noneType),
-      new FuncType(curEnv.name + "$" + "print#" + intTypeName, [intType], noneType),
-      new FuncType(curEnv.name + "$" + "print#" + boolTypeName, [boolType], noneType),
+      new FuncType(curEnv.name + "$" + "print#" + objTypeName, [objType], noneType, false),
+      new FuncType(curEnv.name + "$" + "print#" + intTypeName, [intType], noneType, false),
+      new FuncType(curEnv.name + "$" + "print#" + boolTypeName, [boolType], noneType, false),
     ]
   
     for (const builtinFunc of builtinFuncs) {

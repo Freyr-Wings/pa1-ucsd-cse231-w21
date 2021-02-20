@@ -98,6 +98,15 @@ function getMethodFromPtr(ct: ClassType, methodName: string): Array<string> {
   ]
 }
 
+function getAttributeFromPtr(ct: ClassType, attrName: string): Array<string> {
+  return [
+    `(i32.const ${(
+    ct.headerSize + ct.attributes.get(attrName).offset) * constant.WORD_SIZE})`,
+    `(i32.add)`,
+    `(i32.load)`
+  ];
+}
+
 const binaryOpToWASM: Map<string, Array<string>> = new Map([
   ["+", ["(i32.add)"]],
   ["-", ["(i32.sub)"]],
@@ -193,24 +202,40 @@ function codeGenExpr(expr: Expr): Array<string> {
       return codeGenLiteral(expr.value);
     }
     case "id": {
-      // load the value of this id (ptr for obj / func, val for int / bool)
-      wasms = wasms.concat(
-        getPtrFromPtrPtrOffset(constant.PTR_DL, -1)
-      );  // pointer to current SL 
-      let iterEnv = curEnv;
-      let counter = 0;
-      while (!iterEnv.nameToVar.has(expr.name)) {
-        counter += 1;
-        iterEnv = iterEnv.parent;
-        wasms = wasms.concat([`(i32.load)`])
+      let asVar = curEnv.findVar(expr.name);
+      if (asVar) {
+        wasms = wasms.concat(
+          getPtrFromPtrPtrOffset(constant.PTR_DL, -1)
+        );  // pointer to current SL 
+        let iterEnv = curEnv;
+        let counter = 0;
+        while (!iterEnv.nameToVar.has(expr.name)) {
+          counter += 1;
+          iterEnv = iterEnv.parent;
+          wasms = wasms.concat([`(i32.load)`])
+        }
+        // at SL now
+        let idInfo = iterEnv.nameToVar.get(expr.name);
+        wasms = wasms.concat([
+          `(i32.const ${(-1 - idInfo.offset) * constant.WORD_SIZE})`,
+          `(i32.add)`,
+          `(i32.load)`,
+        ])
+        break;
       }
-      // at SL now
-      let idInfo = iterEnv.nameToVar.get(expr.name);
-      wasms = wasms.concat([
-        `(i32.const ${(-1 - idInfo.offset) * constant.WORD_SIZE})`,
-        `(i32.add)`,
-        `(i32.load)`,
-      ])
+
+      let asFunc = curEnv.findFunc(expr.name);
+      if (asFunc) {
+        wasms = wasms.concat([
+          `(i32.const ${memoryManager.functionNameToId.get(asFunc.globalName)})`,
+        ])
+        break;
+      }
+
+      let asClass = curEnv.findClass(expr.name);
+      if (asClass) {
+
+      }
       break;
     }
     case "unaryop": {
@@ -251,7 +276,6 @@ function codeGenExpr(expr: Expr): Array<string> {
           codeGenNoneAbort(),
 
           loadTempValue(),
-
           [
             `(i32.const ${(
             ownerType.headerSize + 
@@ -262,93 +286,107 @@ function codeGenExpr(expr: Expr): Array<string> {
         );
       } else if (ownerType.methods.has(expr.property)) {
         wasms = wasms.concat(
-          setValWithPtrPtrOffsetExpr(constant.PTR_SP, -1, ownerWASM),
-          setPtrWithPtrPtrOffset(constant.PTR_SP, -1),
-          getPtrFromPtrPtr(constant.PTR_SP),  // load owner ptr
+          storeTempValueWithExpr(ownerWASM),  // load owner ptr
+
+          loadTempValue(),
+          codeGenNoneAbort(),
+
+          loadTempValue(),
           getMethodFromPtr(ownerType, expr.property),
         );
       }
       break;
     }
     case "call": {
-      // member
-      // init
       if (expr.caller.tag !== "member" && expr.caller.tag !== "id") {
         break;
       }
 
-      // init
-      let classType = expr.type;  // the return type
-      let funcType = expr.caller.funcType;
-
-      if (expr.caller.tag === "id") {
-        if (!classType.methods.has("__init__")) {
-          // ptr on stack, no acti
-          return codeGenAlloc(classType);
-        }
-      }
-
-      let fillPtrAndGetMethod: Array<string> = new Array();
       let pushArgsExpr: Array<string> = new Array();
+      let isMemberFunc = true;
 
-      let funcGlobalName = `${classType.globalName}#__init__`;
-      if (expr.caller.tag === "member") {
-        funcGlobalName = funcType.globalName;
+      if (expr.caller.classType) {
+        let ct = expr.caller.classType;
+        if (!ct.methods.has("__init__")) {
+          // ptr on stack, no acti
+          return codeGenAlloc(ct);
+        } else {
+          let funcEnv = envManager.envMap.get(`${ct.globalName}#__init__`);
+          pushArgsExpr = codeGenFillParam(funcEnv, expr.args, true);
+          wasms = wasms.concat(
+            storeTempValueWithExpr(codeGenAlloc(ct)),
+            codeGenCallerInit(),
+            [`;; fillPtrAndGetMethod`],
+            // codeGenAlloc(ct),
+            setPtrWithPtrPtrOffset(constant.PTR_SP, -1),
+            setValWithPtrPtrOffsetExpr(constant.PTR_SP, 0, loadTempValue()),
+
+            loadTempValue(),  // need an extra ptr as result
+
+            loadTempValue(),
+            getMethodFromPtr(ct, "__init__"),
+            [`;; pushArgsExpr`],
+            pushArgsExpr,
+            [`(call_indirect (type ${constant.WASM_FUNC_TYPE}))`],
+            [`(drop)`], 
+            [`;; caller destroy`],
+            codeGenCallerDestroy(),
+          );
+          return wasms;
+        }
       }
 
-      let iterEnv = envManager.envMap.get(funcGlobalName);
+      let ft = expr.caller.funcType;
+      let funcEnv = envManager.envMap.get(ft.globalName);
+      isMemberFunc = ft.isMemberFunc;
+      pushArgsExpr = codeGenFillParam(funcEnv, expr.args, ft.isMemberFunc);
       
-
-      iterEnv.nameToVar.forEach((variable, name) => {
-        if (variable.offset <= expr.args.length && variable.offset > 0) {
-          pushArgsExpr = pushArgsExpr.concat(
-            setValWithPtrPtrOffsetExpr(constant.PTR_DL, -2-variable.offset, codeGenExpr(expr.args[variable.offset - 1])),
-          )
-        }
-      });
-
-      pushArgsExpr = pushArgsExpr.concat(
-        setPtrWithPtrPtrOffset(constant.PTR_SP, -expr.args.length)
+      wasms = wasms.concat(
+        codeGenExpr(expr.caller),
+        codeGenCallerInit(),
       );
 
-      if (expr.caller.tag === "id") {
-        fillPtrAndGetMethod = fillPtrAndGetMethod.concat(
-          codeGenAlloc(classType),
-          setValWithPtrPtrOffsetExpr(constant.PTR_SP, -1, getPtrFromPtrPtrOffset(constant.PTR_EP, -classType.size)),  // put 'self' on acti
-          setPtrWithPtrPtrOffset(constant.PTR_SP, -1),
-          getPtrFromPtrPtrOffset(constant.PTR_EP, -classType.size),  // need an extra ptr as result
-          getMethodFromPtr(classType, "__init__"),
-        )
+      if (isMemberFunc) {
         wasms = wasms.concat(
-          codeGenMethodCall(fillPtrAndGetMethod, pushArgsExpr),
-          ['drop'],  // drop none return 
-        )
-      } else if (expr.caller.tag === "member") {
-        wasms = wasms.concat(
-          storeTempValueWithExpr(codeGenExpr(expr.caller.owner)),
-          codeGenCallerInit(),
-          [`;; fillPtrAndGetMethod`],
+          [`;; push self`],
           setPtrWithPtrPtrOffset(constant.PTR_SP, -1),
           setValWithPtrPtrOffsetExpr(constant.PTR_SP, 0, loadTempValue()),
-          
-          loadTempValue(),
-          codeGenNoneAbort(),
-
-          loadTempValue(),
-          getMethodFromPtr(expr.caller.owner.type, expr.caller.property),
-
-          [`;; pushArgsExpr`],
-          pushArgsExpr,
-          // [`(call $print#debug)`],
-          [`(call_indirect (type ${constant.WASM_FUNC_TYPE}))`],
-          [`;; caller destroy`],
-          codeGenCallerDestroy(),
-        );
+        )
       }
+
+      wasms = wasms.concat(
+        [`;; push args`],
+        pushArgsExpr,
+        [`(call_indirect (type ${constant.WASM_FUNC_TYPE}))`],
+        [`;; caller destroy`],
+        codeGenCallerDestroy(),
+      );
+      
       break;
     }
   }
   return wasms;
+}
+
+function codeGenFillParam(funcEnv: Env, args: Array<Expr>, isMemberFunc: boolean): Array<string> {
+  let pushArgsExpr: Array<string> = new Array();
+  let paramSize = args.length;
+  let offset = isMemberFunc ? 1 : 0;
+
+  funcEnv.nameToVar.forEach((variable, name) => {
+    if (variable.offset < paramSize) {
+      if (isMemberFunc && variable.offset === 0) {
+        return;
+      }
+      pushArgsExpr = pushArgsExpr.concat(
+        setValWithPtrPtrOffsetExpr(constant.PTR_DL, -2-variable.offset, codeGenExpr(args[variable.offset - offset])),
+      )
+    }
+  });
+  pushArgsExpr = pushArgsExpr.concat(
+    setPtrWithPtrPtrOffset(constant.PTR_SP, -paramSize),
+  );
+  return pushArgsExpr;
 }
 
 function codeGenNoneAbort(): Array<string> {
@@ -365,37 +403,6 @@ function codeGenNoneAbort(): Array<string> {
   )
   return wasms;
 }
-
-function codeGenMethodCall(fillPtrAndGetMethod: Array<string>, pushArgsExpr: Array<string>): Array<string> {
-  let wasms: Array<string> = new Array();
-  wasms = wasms.concat(
-    [`;; caller init`],
-    codeGenCallerInit(),
-    [`;; fillPtrAndGetMethod`],
-    fillPtrAndGetMethod,
-    [`;; pushArgsExpr`],
-    pushArgsExpr,
-    [`(call_indirect (type ${constant.WASM_FUNC_TYPE}))`],
-    [`;; caller destroy`],
-    codeGenCallerDestroy(),
-  )
-  return wasms;
-}
-
-function codeGenGetPos(e: Expr): Array<string> {
-  let wasms: Array<string> = new Array();
-  switch (e.tag) {
-    case "member": {
-      break;
-    }
-    case "id": {
-      break;
-    }
-      
-  }
-  return wasms;
-}
-
 
 function codeGenStmt(s: Stmt): Array<string> {
   let wasms: Array<string> = new Array();
@@ -519,10 +526,6 @@ function codeGenMethodDef(fd: FuncDef, ft: FuncType): Array<string> {
   for (const varDef of fd.body.defs.varDefs) {
     wasms = wasms.concat(codeGenVarDef(varDef));
   }
-
-  // wasms = wasms.concat(
-  //   updateRegisterWithOffset(PTR_SP, -fd.body.defs.varDefs.length),
-  // );
 
   for (const stmt of fd.body.stmts) {
     wasms = wasms.concat(codeGenStmt(stmt));

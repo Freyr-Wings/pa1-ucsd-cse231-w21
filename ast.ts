@@ -49,11 +49,11 @@ export type Expr =
   { cursor: SyntaxNode, type: ClassType } &
   (
     { tag: "literal", value: Literal }
-    | { tag: "id", name: VarName, funcType: FuncType }  //, subtag: "unknown" | "variable" | "method" | "owner" }
+    | { tag: "id", name: VarName, funcType: FuncType, classType: ClassType }
     | { tag: "binaryop", expr1: Expr, expr2: Expr, op: Op }
     | { tag: "unaryop", expr: Expr, op: Op }
     | { tag: "call", caller: Expr, args: Array<Expr> }
-    | { tag: "member", owner: Expr, property: VarName, funcType: FuncType }  // e.g.: x.y.z -> name: x.y, property: z, z can be function
+    | { tag: "member", owner: Expr, property: VarName, funcType: FuncType, classType: ClassType }  // e.g.: x.y.z -> name: x.y, property: z, z can be function
   )
 
 export type VarName = string
@@ -76,11 +76,13 @@ export class FuncType {
   globalName: string;
   paramsType: Array<ClassType>;
   returnType: ClassType;
+  isMemberFunc: boolean;
 
-  constructor(globalName: string, paramsType: Array<ClassType>, returnType: ClassType) {
+  constructor(globalName: string, paramsType: Array<ClassType>, returnType: ClassType, isMemberFunc: boolean) {
     this.globalName = globalName;
     this.paramsType = paramsType;
     this.returnType = returnType;
+    this.isMemberFunc = isMemberFunc;
   }
 
   public getName(): string {

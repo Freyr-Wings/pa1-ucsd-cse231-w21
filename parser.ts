@@ -43,6 +43,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr {
         cursor: c.node,
         type: null,
         funcType: null,
+        classType: null,
       }
     } 
     case "VariableName": {
@@ -52,6 +53,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr {
         cursor: c.node,
         type: null,
         funcType: null,
+        classType: null,
       }
     } 
     case "ParenthesizedExpression": {
@@ -105,6 +107,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr {
         cursor: c.node,
         type: null,
         funcType: null,
+        classType: null,
       }
     }
     case "CallExpression": {

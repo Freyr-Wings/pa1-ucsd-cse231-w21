@@ -15,6 +15,8 @@ export class BasicREPL {
   constructor(importObject: any) { 
     this.importObject = importObject;
     this.importObject.js = { memory: this.memoryManager.memory };
+
+    (window as any)["wasmMemory"] = new Int32Array(this.memoryManager.memory.buffer);
   }
 
   async run(source: string): Promise<any> {
