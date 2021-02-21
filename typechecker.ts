@@ -435,6 +435,11 @@ export function tcMethodDef(ct: ClassType, fd: FuncDef) {
   curEnv = curEnv.parent;
 
   let memberFunc = curEnv.nameToFunc.get(`${ct.getName()}#${fd.name}`);
+  if (ct.methods.has(fd.name)) {
+    if (!memberFunc.isOverload(ct.methods.get(fd.name))) {
+      throw new Error(`Method overload with mismatched signature: ${fd.name}`);
+    }
+  }
   ct.methods.set(fd.name, memberFunc);
 
   if (!ct.methodPtrs.has(fd.name)) {

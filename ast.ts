@@ -89,6 +89,27 @@ export class FuncType {
     let components = this.globalName.split("$");
     return components[components.length - 1];
   }
+
+  public isOverload(ft: FuncType): boolean {
+    if (this.paramsType.length !== ft.paramsType.length) {
+      return false;
+    }
+    let idx = 0;
+    if (this.isMemberFunc) {
+      idx = 1;
+    }
+    for (let i = idx; i < this.paramsType.length; i++) {
+      let p1 = this.paramsType[i];
+      let p2 = ft.paramsType[i];
+      if (p1.globalName !== p2.globalName) {
+        return false;
+      }
+    }
+    if (this.returnType.globalName !== ft.returnType.globalName) {
+      return false;
+    }
+    return true;
+  }
 };
 
 export class ClassType {
