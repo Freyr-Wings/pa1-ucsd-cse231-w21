@@ -61,12 +61,12 @@ function setPtrWithPtrPtrOffset(pp: number, offset: number): Array<string> {
   return setValWithPtrExpr(pp, getPtrFromPtrPtrOffset(pp, offset));
 }
 
-function storeTempValueWithExpr(expr: Array<string>): Array<string> {
-  return setValWithPtrExpr(constant.PTR_T1, expr);
+function storeTempValueWithExpr(p: number, expr: Array<string>): Array<string> {
+  return setValWithPtrExpr(p, expr);
 }
 
-function loadTempValue(): Array<string> {
-  return getValFromPtr(constant.PTR_T1);
+function loadTempValue(p: number): Array<string> {
+  return getValFromPtr(p);
 }
 
 function findVarPosition(name: string): Array<string> {
@@ -124,14 +124,16 @@ const binaryOpToWASM: Map<string, Array<string>> = new Map([
   ["or", ["(i32.or)"]],
 ])
 
-function codeGenCallerInit(): Array<string> {
+function codeGenCallerInit(loadParam: Array<string>): Array<string> {
   let wasms: Array<string> = new Array();
 
   wasms = wasms.concat(
     setValWithPtrPtrOffsetExpr(constant.PTR_SP, -1, getPtrFromPtrPtr(constant.PTR_DL)),
     setValWithPtrPtrOffsetExpr(constant.PTR_SP, -2, getPtrFromPtrPtrOffset(constant.PTR_DL, -1)),
-    setValWithPtrExpr(constant.PTR_DL, getPtrFromPtrPtrOffset(constant.PTR_SP, -1)),
+    storeTempValueWithExpr(constant.PTR_T2, getPtrFromPtrPtrOffset(constant.PTR_SP, -1)),  // store new DL
     setPtrWithPtrPtrOffset(constant.PTR_SP, -2),
+    loadParam,
+    setValWithPtrExpr(constant.PTR_DL, loadTempValue(constant.PTR_T2)),
   )
   return wasms;
 }
@@ -270,12 +272,12 @@ function codeGenExpr(expr: Expr): Array<string> {
       let ownerType = expr.owner.type;
       if (ownerType.attributes.has(expr.property)) {
         wasms = wasms.concat(
-          storeTempValueWithExpr(ownerWASM),  // load owner ptr
+          storeTempValueWithExpr(constant.PTR_T1, ownerWASM),  // load owner ptr
 
-          loadTempValue(),
+          loadTempValue(constant.PTR_T1),
           codeGenNoneAbort(),
 
-          loadTempValue(),
+          loadTempValue(constant.PTR_T1),
           [
             `(i32.const ${(
             ownerType.headerSize + 
@@ -286,12 +288,12 @@ function codeGenExpr(expr: Expr): Array<string> {
         );
       } else if (ownerType.methods.has(expr.property)) {
         wasms = wasms.concat(
-          storeTempValueWithExpr(ownerWASM),  // load owner ptr
+          storeTempValueWithExpr(constant.PTR_T1, ownerWASM),  // load owner ptr
 
-          loadTempValue(),
+          loadTempValue(constant.PTR_T1),
           codeGenNoneAbort(),
 
-          loadTempValue(),
+          loadTempValue(constant.PTR_T1),
           getMethodFromPtr(ownerType, expr.property),
         );
       }
@@ -314,19 +316,14 @@ function codeGenExpr(expr: Expr): Array<string> {
           let funcEnv = envManager.envMap.get(`${ct.globalName}#__init__`);
           pushArgsExpr = codeGenFillParam(funcEnv, expr.args, true);
           wasms = wasms.concat(
-            storeTempValueWithExpr(codeGenAlloc(ct)),
-            codeGenCallerInit(),
-            [`;; fillPtrAndGetMethod`],
-            // codeGenAlloc(ct),
-            setPtrWithPtrPtrOffset(constant.PTR_SP, -1),
-            setValWithPtrPtrOffsetExpr(constant.PTR_SP, 0, loadTempValue()),
+            storeTempValueWithExpr(constant.PTR_T1, codeGenAlloc(ct)),
 
-            loadTempValue(),  // need an extra ptr as result
+            loadTempValue(constant.PTR_T1),  // need an extra ptr as result
 
-            loadTempValue(),
+            loadTempValue(constant.PTR_T1),
             getMethodFromPtr(ct, "__init__"),
-            [`;; pushArgsExpr`],
-            pushArgsExpr,
+            
+            codeGenCallerInit(pushArgsExpr),
             [`(call_indirect (type ${constant.WASM_FUNC_TYPE}))`],
             [`(drop)`], 
             [`;; caller destroy`],
@@ -339,24 +336,15 @@ function codeGenExpr(expr: Expr): Array<string> {
       let ft = expr.caller.funcType;
       let funcEnv = envManager.envMap.get(ft.globalName);
       isMemberFunc = ft.isMemberFunc;
+
       pushArgsExpr = codeGenFillParam(funcEnv, expr.args, ft.isMemberFunc);
       
       wasms = wasms.concat(
         codeGenExpr(expr.caller),
-        codeGenCallerInit(),
       );
 
-      if (isMemberFunc) {
-        wasms = wasms.concat(
-          [`;; push self`],
-          setPtrWithPtrPtrOffset(constant.PTR_SP, -1),
-          setValWithPtrPtrOffsetExpr(constant.PTR_SP, 0, loadTempValue()),
-        )
-      }
-
       wasms = wasms.concat(
-        [`;; push args`],
-        pushArgsExpr,
+        codeGenCallerInit(pushArgsExpr),
         [`(call_indirect (type ${constant.WASM_FUNC_TYPE}))`],
         [`;; caller destroy`],
         codeGenCallerDestroy(),
@@ -373,13 +361,21 @@ function codeGenFillParam(funcEnv: Env, args: Array<Expr>, isMemberFunc: boolean
   let paramSize = args.length;
   let offset = isMemberFunc ? 1 : 0;
 
+  if (isMemberFunc) {
+    pushArgsExpr = pushArgsExpr.concat(
+      [`;; push self`],
+      setPtrWithPtrPtrOffset(constant.PTR_SP, -1),
+      setValWithPtrPtrOffsetExpr(constant.PTR_SP, 0, loadTempValue(constant.PTR_T1)),
+    )
+  }
+
   funcEnv.nameToVar.forEach((variable, name) => {
     if (variable.offset < paramSize) {
       if (isMemberFunc && variable.offset === 0) {
         return;
       }
       pushArgsExpr = pushArgsExpr.concat(
-        setValWithPtrPtrOffsetExpr(constant.PTR_DL, -2-variable.offset, codeGenExpr(args[variable.offset - offset])),
+        setValWithPtrPtrOffsetExpr(constant.PTR_SP, -1-variable.offset, codeGenExpr(args[variable.offset - offset])),
       )
     }
   });
@@ -463,7 +459,10 @@ function codeGenStmt(s: Stmt): Array<string> {
       if (s.expr.tag === "literal" && s.expr.value.tag === "None") {
         break;
       }
-      wasms = wasms.concat(codeGenExpr(s.expr));
+      wasms = wasms.concat(
+        codeGenExpr(s.expr),
+        [`(local.set $$last)`],
+      );
       break;
     }
     case "while": {
@@ -512,6 +511,46 @@ function codeGenVarDef(vd: VarDef): Array<string> {
   return wasms;
 }
 
+function codeGenFuncDef(fd: FuncDef): Array<string> {
+  let wasms: Array<string> = new Array();
+
+  let ft = curEnv.nameToFunc.get(fd.name);
+  curEnv = curEnv.nameToChildEnv.get(fd.name);
+
+  wasms = wasms.concat(
+    [
+      `(func ${ft.globalName} (result i32)`,
+      `(local $$last i32)`
+    ],
+  )
+
+  for (const varDef of fd.body.defs.varDefs) {
+    wasms = wasms.concat(codeGenVarDef(varDef));
+  }
+
+  for (const stmt of fd.body.stmts) {
+    wasms = wasms.concat(codeGenStmt(stmt));
+  }
+  if (ft.returnType.getName() === "<None>") {
+    wasms = wasms.concat([
+      `(i32.const 0)`,
+      `(local.set $$last)`
+    ]);
+  }
+
+  wasms = wasms.concat([
+    `(local.get $$last)`,
+    `)`
+  ]);
+
+  for (const funcDef of fd.body.defs.funcDefs) {
+    wasms = wasms.concat(codeGenFuncDef(funcDef));
+  }
+  
+  curEnv = curEnv.parent;
+  return wasms;
+}
+
 function codeGenMethodDef(fd: FuncDef, ft: FuncType): Array<string> {
   let wasms: Array<string> = new Array();
 
@@ -532,12 +571,16 @@ function codeGenMethodDef(fd: FuncDef, ft: FuncType): Array<string> {
   }
 
   if (ft.returnType.getName() === "<None>") {
-    wasms = wasms.concat([`(i32.const 0)`]);
+    wasms = wasms.concat([
+      `(i32.const 0)`,
+      `(local.set $$last)`
+    ]);
   }
 
-  wasms = wasms.concat(
-    [`)`]
-  );
+  wasms = wasms.concat([
+    `(local.get $$last)`,
+    `)`
+  ]);
 
   curEnv = curEnv.parent;
   return wasms;
@@ -579,6 +622,10 @@ function codeGenProgram(p: Program): Array<Array<string>> {
     let [cwasm, mwasm] = codeGenClassDef(classDef);
     classWASM = classWASM.concat(cwasm);
     methodWASM = methodWASM.concat(mwasm);
+  }
+
+  for (const funcDef of p.defs.funcDefs) {
+    methodWASM = methodWASM.concat(codeGenFuncDef(funcDef));
   }
 
   let stmtsWASM: Array<string> = new Array();

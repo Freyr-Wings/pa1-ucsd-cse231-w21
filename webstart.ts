@@ -2,7 +2,7 @@ import { BasicREPL } from './repl';
 
 document.addEventListener("DOMContentLoaded", function () {
 
-  function print(type: number, value: number) {
+  function print(type: number, value: any) {
     console.log("Logging from WASM: ", type, ", ", value);
     const elt = document.createElement("pre");
     document.getElementById("output").appendChild(elt);
@@ -15,21 +15,22 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     } else if (type === 2) {
       text = value.toString();
+    } else if (type === 3) {
+      text = value;
     } else {
       if (value === 0) {
         text = "None";
       } else {
         text = value.toString();
       }
-      
     }
     elt.innerText = text;
-    return value
+    return value;
   }
 
   let importObject = {
     builtin: {
-      print: print,
+      print,
     }
   }
   
