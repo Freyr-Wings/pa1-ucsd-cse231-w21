@@ -1,6 +1,6 @@
 # PROJ
 
-Here is an example of my memory:
+Here is an example of the memory layout:
 
 ```
 0x00000  0
