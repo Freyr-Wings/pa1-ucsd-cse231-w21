@@ -79,13 +79,13 @@ async function mem() {
     (type $return_nothing (func))
     (type $return_i32 (func (result i32)))
     (func (export "exported_func") (result i32)
-      i32.const 0
-      i32.eqz
-      (if (then
+      (block $B0
         i32.const 1
-        ;;call_indirect (type $return_nothing)
-      ))
-      ;;i32.const 233
+        i32.const 13
+        i32.store
+        br $B0
+      )
+      i32.const 1
       i32.load
     )
   )`

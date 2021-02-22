@@ -7,7 +7,7 @@ export const TAG_LIST = 4;
 export const TAG_CLS_BEGIN = 5;
 
 export const WORD_SIZE = 4;
-export const MEM_SIZE = 10;
+export const MEM_SIZE = 10;  // 10*64KB
 
 export const PTR_SP = 1;
 export const PTR_DL = 2;

@@ -461,7 +461,7 @@ function codeGenStmt(s: Stmt): Array<string> {
       }
       wasms = wasms.concat(
         codeGenExpr(s.expr),
-        [`(local.set $$last)`],
+        [`(local.set $$last)`, `(br $$func_block)`],
       );
       break;
     }
@@ -520,7 +520,8 @@ function codeGenFuncDef(fd: FuncDef): Array<string> {
   wasms = wasms.concat(
     [
       `(func ${ft.globalName} (result i32)`,
-      `(local $$last i32)`
+      `(local $$last i32)`,
+      `(block $$func_block`
     ],
   )
 
@@ -539,6 +540,7 @@ function codeGenFuncDef(fd: FuncDef): Array<string> {
   }
 
   wasms = wasms.concat([
+    `)`,
     `(local.get $$last)`,
     `)`
   ]);
@@ -558,7 +560,8 @@ function codeGenMethodDef(fd: FuncDef, ft: FuncType): Array<string> {
   wasms = wasms.concat(
     [
       `(func ${ft.globalName} (result i32)`,
-      `(local $$last i32)`
+      `(local $$last i32)`,
+      `(block $$func_block`
     ],
   )
 
@@ -578,6 +581,7 @@ function codeGenMethodDef(fd: FuncDef, ft: FuncType): Array<string> {
   }
 
   wasms = wasms.concat([
+    `)`,
     `(local.get $$last)`,
     `)`
   ]);
