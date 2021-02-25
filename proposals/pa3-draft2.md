@@ -4,6 +4,20 @@
 
 ```python
 class animal(object):
+    number: int = 0
+    def __init__(self:animal):
+        self.number = 2
+kit:animal = None
+kit = animal()
+print(kit.number)
+```
+
+The program is supposed to output 2 to represent it supports definition of specified constructor.
+
+## 2.  Constructor with parameters
+
+```python
+class animal(object):
     number: int = 1
     def __init__(self:animal, number:int):
         self.number = number
@@ -12,24 +26,7 @@ kit = animal(2)
 print(kit.number)
 ```
 
-The program is supposed to output 2 to represent it supports definition of specified constructor.
-
-## 2.  Keyword "super"
-
-```python
-class animal(object):
-    number: int = 1
-        
-class cat(animal):
-    def __init__(self:cat, number: int):
-    	super(animal, self)
-        print("created a cat")
-        
-kit:cat = None
-kit = cat()
-```
-
-The program is supposed to output "created a cat" to represent it supports keyword "super".
+The program is supposed to output 2 to represent it supports parameters of constructor.
 
 ## 3.  Attributes of Base Class
 
