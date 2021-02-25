@@ -7,8 +7,8 @@ class animal(object):
     number: int = 1
     def __init__(self:animal, number:int):
         self.number = number
-kit:cat = None
-kit = cat(2)
+kit:animal = None
+kit = animal(2)
 print(kit.number)
 ```
 
@@ -27,7 +27,6 @@ class cat(animal):
         
 kit:cat = None
 kit = cat()
-
 ```
 
 The program is supposed to output "created a cat" to represent it supports keyword "super".
@@ -98,22 +97,23 @@ kit.run()
 
 The program is supposed to output 1 to represent it supports definition of methods of derived class.
 
-## 7.  ClassType Inference
+## 7.  Hierarchy of Inheritance
 
 ```python
 class animal(object):
     number:int = 1
-        
-class cat(animal):
-    def run(self):
-        print(self.number)
+class mammal(animal):
+    leg:int = 4
+class cat(mammal):
+    def run(self:cat):
+        print(self.number+self.leg)
         
 kit:cat = None
 kit = cat()
 kit.run()
 ```
 
-The program is supposed to output 1 to represent it supports classtype inference of keyword self inside definition of methods.
+The program is supposed to output 1 to represent it supports inheritance of a derived class.
 
 ## 8.  Re-defined Methods
 
@@ -134,6 +134,25 @@ kit.run()
 The program is supposed to output 2 to represent it supports re-definition of methods in derived class.
 
 ## 9.  Polymorphism
+
+```python
+class animal(object):
+    def run(self:animal):
+        print(1)
+        
+class cat(animal):
+    pass
+def f(pet:animal):
+    pet.run()
+
+kit:cat = None
+kit = cat()
+f(kit)
+```
+
+The program is supposed to output 1 to represent it supports assigning a derived class to its base class.
+
+## 10.  Polymorphism
 
 ```python
 class animal(object):
@@ -159,28 +178,9 @@ f(bob)
 
 The program is supposed to output 2\n1 to represent it supports polymorphism.
 
-## 10.  Multi Inheritance
-
-```python
-class animal(object):
-    number: int = 1
-
-class b(object):
-    e: int = 2
-
-class cat(animal, b):
-    pass
-        
-kit:cat = None
-kit = cat()
-print(kit.number+kit.e)
-```
-
-The program is supposed to output 3 to represent it supports multi-inheritance.
-
 # Q2 A description of how you will add tests for your feature
 
-Firstly, we add some basic tests to certify our program correctly supports attributes and methods in both base and derived classes. We can compare the output and memory space with expected answer to check if our program works properly. Secondly, we add some tests to demonstrate our program is able to handle some advanced functions such as specified constructors, polymorphism. We still check the memory space to guarantee correctness. Finally, if time permits. we implement some extended functions like multi inheritance and use extra examples to test them.
+Firstly, we add some basic tests to certify our program correctly supports attributes and methods in both base and derived classes. We can compare the output and memory space with expected answer to check if our program works properly. Secondly, we add some tests to demonstrate our program is able to handle some advanced functions such as specified constructors, polymorphism. We still check the memory space to guarantee correctness. 
 
 # Q9 A milestone plan for March 4 
 
