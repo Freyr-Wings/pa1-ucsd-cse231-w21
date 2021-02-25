@@ -118,7 +118,6 @@ export class ClassType {
   methodPtrs: Map<string, number>;
   methodPtrsHead: number;
   attributes: Map<string, Variable>;
-  attributesHead: number;
   parent: ClassType;
   size: number;
   tag: number;
