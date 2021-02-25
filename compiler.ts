@@ -364,13 +364,12 @@ function codeGenFillParam(funcEnv: Env, args: Array<Expr>, isMemberFunc: boolean
   if (isMemberFunc) {
     pushArgsExpr = pushArgsExpr.concat(
       [`;; push self`],
-      setPtrWithPtrPtrOffset(constant.PTR_SP, -1),
-      setValWithPtrPtrOffsetExpr(constant.PTR_SP, 0, loadTempValue(constant.PTR_T1)),
+      setValWithPtrPtrOffsetExpr(constant.PTR_SP, -1, loadTempValue(constant.PTR_T1)),
     )
   }
 
   funcEnv.nameToVar.forEach((variable, name) => {
-    if (variable.offset < paramSize) {
+    if (variable.offset < paramSize + offset) {
       if (isMemberFunc && variable.offset === 0) {
         return;
       }
@@ -380,7 +379,7 @@ function codeGenFillParam(funcEnv: Env, args: Array<Expr>, isMemberFunc: boolean
     }
   });
   pushArgsExpr = pushArgsExpr.concat(
-    setPtrWithPtrPtrOffset(constant.PTR_SP, -paramSize),
+    setPtrWithPtrPtrOffset(constant.PTR_SP, -paramSize-offset),
   );
   return pushArgsExpr;
 }
